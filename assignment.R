@@ -3,18 +3,21 @@ library(ggplot2)
 
 ## Loading and processing data
 data <- read.csv(file = "activity.csv")
-activityDataTable <- data.table(data) [, 1:2, with = FALSE]
+activityDataPerDay <- data.table(data) [, 1:2, with = FALSE]
+activityDataPerInterval <- data.table(data) [, c(1,3), with = FALSE]
 
 ## Total number of steps per day
-stepsPerDay <- aggregate(. ~ date, data=activityDataTable, FUN=sum)
+stepsPerDay <- aggregate(. ~ date, data=activityDataPerDay, FUN=sum)
 ggplot(stepsPerDay, aes(x=steps)) + geom_histogram(colour="black", fill="white") + scale_y_continuous(labels = function (x) ceiling(x))
 ggsave("figures/steps-histogram.png", width=4, height=4, dpi=100)
 meanPerDay <- mean(stepsPerDay$steps)
 medianPerDay <- median(stepsPerDay$steps)
 
 ## Average daily pattern
-# Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
-# Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+stepsPerInterval <- aggregate(. ~ interval, data=activityDataPerInterval, FUN=mean)
+ggplot(stepsPerInterval, aes(x=interval, y=steps)) + geom_line()
+ggsave("figures/steps-per-interval.png", width=4, height=4, dpi=100)
+intervalWithMaxAverageSteps <- stepsPerInterval[stepsPerInterval$steps == max(stepsPerInterval$steps),]
 
 ## Imputing missing values
 # Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
