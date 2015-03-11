@@ -20,10 +20,20 @@ ggsave("figures/steps-per-interval.png", width=4, height=4, dpi=100)
 intervalWithMaxAverageSteps <- stepsPerInterval[stepsPerInterval$steps == max(stepsPerInterval$steps),]
 
 ## Imputing missing values
-# Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
-# Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
-# Create a new dataset that is equal to the original dataset but with the missing data filled in.
-# Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+rowsWithMissingDates <- nrow(data[is.na(data$date),])
+rowsWithMissingInterval <- nrow(data[is.na(data$interval),])
+rowsWithMissingSteps <- nrow(data[is.na(data$steps),])
+dataWithNasFilledIn <- data
+replacementStragegy <- function(interval) {
+  stepsPerInterval[stepsPerInterval$interval == interval, c('steps')]
+}
+dataWithNasFilledIn[is.na(dataWithNasFilledIn$steps), c('steps')] <- replacementStragegy(stepsPerInterval$interval)
+activityDataPerDayWithImputedValues <- data.table(dataWithNasFilledIn) [, 1:2, with = FALSE]
+stepsPerDayWithImputedValues <- aggregate(. ~ date, data=activityDataPerDayWithImputedValues, FUN=sum)
+ggplot(stepsPerDayWithImputedValues, aes(x=steps)) + geom_histogram(colour="black", fill="white") + scale_y_continuous(labels = function (x) ceiling(x))
+ggsave("figures/steps-histogram-with-imputed-values.png", width=4, height=4, dpi=100)
+meanPerDayWithImputedValues <- mean(stepsPerDayWithImputedValues$steps)
+medianPerDayWithImputedValues <- median(stepsPerDayWithImputedValues$steps)
 
 ## Are there differences in activity patterns between weekdays and weekends
 # Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
