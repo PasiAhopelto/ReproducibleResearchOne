@@ -1,5 +1,6 @@
 library(data.table)
 library(ggplot2)
+library(grid)
 
 ## Loading and processing data
 data <- read.csv(file = "activity.csv")
@@ -8,15 +9,15 @@ activityDataPerInterval <- data.table(data) [, c(1,3), with = FALSE]
 
 ## Total number of steps per day
 stepsPerDay <- aggregate(. ~ date, data=activityDataPerDay, FUN=sum)
-ggplot(stepsPerDay, aes(x=steps)) + geom_histogram(colour="black", fill="white") + scale_y_continuous(labels = function (x) ceiling(x))
-ggsave("figures/steps-histogram.png", width=4, height=4, dpi=100)
+plot <- ggplot(stepsPerDay, aes(x=steps)) + geom_histogram(colour="black", fill="white") + scale_y_continuous(labels = function (x) ceiling(x))
+print(plot)
 meanPerDay <- mean(stepsPerDay$steps)
 medianPerDay <- median(stepsPerDay$steps)
 
 ## Average daily pattern
 stepsPerInterval <- aggregate(. ~ interval, data=activityDataPerInterval, FUN=mean)
-ggplot(stepsPerInterval, aes(x=interval, y=steps)) + geom_line()
-ggsave("figures/steps-per-interval.png", width=4, height=4, dpi=100)
+plot <- ggplot(stepsPerInterval, aes(x=interval, y=steps)) + geom_line()
+print(plot)
 intervalWithMaxAverageSteps <- stepsPerInterval[stepsPerInterval$steps == max(stepsPerInterval$steps),]
 
 ## Imputing missing values
@@ -30,11 +31,26 @@ replacementStragegy <- function(interval) {
 dataWithNasFilledIn[is.na(dataWithNasFilledIn$steps), c('steps')] <- replacementStragegy(stepsPerInterval$interval)
 activityDataPerDayWithImputedValues <- data.table(dataWithNasFilledIn) [, 1:2, with = FALSE]
 stepsPerDayWithImputedValues <- aggregate(. ~ date, data=activityDataPerDayWithImputedValues, FUN=sum)
-ggplot(stepsPerDayWithImputedValues, aes(x=steps)) + geom_histogram(colour="black", fill="white") + scale_y_continuous(labels = function (x) ceiling(x))
-ggsave("figures/steps-histogram-with-imputed-values.png", width=4, height=4, dpi=100)
+plot <- ggplot(stepsPerDayWithImputedValues, aes(x=steps)) + geom_histogram(colour="black", fill="white") + scale_y_continuous(labels = function (x) ceiling(x))
+print(plot)
 meanPerDayWithImputedValues <- mean(stepsPerDayWithImputedValues$steps)
 medianPerDayWithImputedValues <- median(stepsPerDayWithImputedValues$steps)
 
 ## Are there differences in activity patterns between weekdays and weekends
-# Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
-# Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). See the README file in the GitHub repository to see an example of what this plot should look like using simulated data.
+dataWithDayInfo <- dataWithNasFilledIn
+dataWithDayInfo[, 'day'] <- weekdays(as.Date(dataWithDayInfo$date))
+dataWithDayInfo[dataWithDayInfo$day == 'lauantai' | dataWithDayInfo$day == 'sunnuntai', c('day')] <- "weekend"
+dataWithDayInfo[dataWithDayInfo$day != 'weekend', c('day')] <- "weekday"
+dataWithDayInfo$day <- as.factor(dataWithDayInfo$day)
+
+weekendData <- dataWithDayInfo[dataWithDayInfo$day == 'weekend',]
+weekdayData <- dataWithDayInfo[dataWithDayInfo$day == 'weekday',]
+weekendStepsPerInterval <- aggregate(. ~ interval, data=weekendData, FUN=mean)
+weekdayStepsPerInterval <- aggregate(. ~ interval, data=weekdayData, FUN=mean)
+weekendPlot <- ggplot(weekendStepsPerInterval, aes(y=steps, x=interval)) + geom_line() + ggtitle("Weekends")
+weekdayPlot <- ggplot(weekdayStepsPerInterval, aes(y=steps, x=interval)) + geom_line() + ggtitle("Weekdays")
+layout <- matrix(seq(1, 2), ncol = 1, nrow = 2)
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+print(weekendPlot, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(weekdayPlot, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
